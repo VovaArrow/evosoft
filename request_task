@@ -1,0 +1,54 @@
+# Парсинг сайтов с помощью HTTP запросов
+
+import requests
+from bs4 import BeautifulSoup
+import json
+import csv
+
+
+url_get_ip = 'https://2ip.ru/'
+url_name_timezone = 'https://www.maxmind.com/en/geoip2-precision-demo'
+url_region_list = 'https://gist.githubusercontent.com/salkar/19df1918ee2aed6669e2/raw/84215d4a3fcdfeaabad32e87817ae5bc1073a3b7/Timezones%2520for%2520Russian%2520regions'
+
+get_ip = requests.get(url_get_ip)
+soup_get_ip = BeautifulSoup(get_ip.text, 'lxml')
+
+# Получаем IP с помощью библиотеки BS4
+ip = soup_get_ip.find('div', class_='ip').find('span').text
+
+#Для корректной работы копируем токен с get запроса на сайте
+def get_timezone():
+    url = f'https://geoip.maxmind.com/geoip/v2.1/city/{ip}?demo=1'
+    
+    token = 'Bearer v2.local.w7urKOu1n2sXDjpSZ3fHk77U7dhX3Qzu3MiLb-nj4LBLPg-0qBqURz-q58mqA-sAS0ShfPUgr8KvpQSiOtTyFxO24bmIddSUQBXye8LZNxnhX139Qi3wRBplhFGib39Yq7xwpZBzi8t67grDXFzb0OMcLSTwFU6aknHTVXS_qZVl8gjpJTnt54yMCKALHKLdh1rxqzYRg4x3mCSb'
+    
+    headers = {
+        'Accept':"*/*",
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Authorization': token,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        
+    }
+
+    timezone = requests.get(url, headers=headers)
+    return timezone.json()
+
+try:
+    
+    city = get_timezone()['city']['names']['en']
+    timezones = []
+    region_list = json.dumps(requests.get(url_region_list).json(), ensure_ascii=False)
+
+    for i in json.loads(region_list):
+        if city in i[1]:
+            timezones.append(i[0])
+    with open('request_final_answer.csv', 'w', encoding='utf-8') as file:
+        
+        file.write(city)
+        file.write(timezones)
+            
+                  
+    
+except KeyError:
+    print('Token not find')
